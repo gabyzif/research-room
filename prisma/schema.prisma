@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum MessageAuthorType {
+  USER
+  MODEL
+}
+
+enum ProposalOperation {
+  INSERT
+  REPLACE
+  DELETE
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CONFLICT
+}
+
+enum SourceStatus {
+  VERIFIED
+  INCOMPLETE
+}
+
+enum ApiProvider {
+  OPENAI
+  ANTHROPIC
+  OPENROUTER
+}
+
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  name            String?
+  image           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  accounts        OAuthAccount[]
+  projects        Project[]
+  apiCredentials  ApiCredential[]
+}
+
+model ApiCredential {
+  id           String      @id @default(cuid())
+  userId       String
+  provider     ApiProvider
+  encryptedKey String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+model OAuthAccount {
+  id                   String   @id @default(cuid())
+  userId               String
+  provider             String
+  providerAccountId    String
+  encryptedAccessToken String?
+  encryptedRefreshToken String?
+  expiresAt            Int?
+  scope                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Project {
+  id                  String              @id @default(cuid())
+  ownerId             String
+  title               String
+  brief               String
+  instructions        String              @default("")
+  companions          Json                @default("[]")
+  selectedModelIds    Json
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  owner               User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  messages            ChatMessage[]
+  document            DocumentDraft?
+  proposals           DocumentProposal[]
+  sources             Source[]
+  usageRecords        UsageRecord[]
+}
+
+model ChatMessage {
+  id                 String           @id @default(cuid())
+  projectId          String
+  authorType         MessageAuthorType
+  modelId            String?
+  recipientModelIds  Json
+  content            String
+  researchMode       Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  project            Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  responses          ModelResponse[]
+  proposals          DocumentProposal[]
+
+  @@index([projectId, createdAt])
+}
+
+model ModelResponse {
+  id                String           @id @default(cuid())
+  messageId         String
+  modelId           String
+  content           String
+  sourceIds         Json
+  status            String           @default("complete")
+  inputTokens       Int              @default(0)
+  outputTokens      Int              @default(0)
+  costUsd           Float?
+  credits           Float?
+  createdAt         DateTime         @default(now())
+  message           ChatMessage      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  citations         Citation[]
+  proposals         DocumentProposal[]
+
+  @@index([messageId, modelId])
+}
+
+model DocumentDraft {
+  id          String             @id @default(cuid())
+  projectId   String             @unique
+  markdown    String             @default("")
+  revision    Int                @default(0)
+  updatedAt   DateTime           @updatedAt
+  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisions   DocumentRevision[]
+}
+
+model DocumentRevision {
+  id          String        @id @default(cuid())
+  documentId  String
+  revision    Int
+  markdown    String
+  source      String
+  createdAt   DateTime      @default(now())
+  document    DocumentDraft @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, revision])
+}
+
+model DocumentProposal {
+  id                String            @id @default(cuid())
+  projectId         String
+  messageId         String
+  responseId        String
+  modelId           String
+  baseRevision      Int
+  operation         ProposalOperation
+  targetHeadingId   String
+  markdown          String
+  citationSourceIds Json
+  status            ProposalStatus    @default(PENDING)
+  createdAt         DateTime          @default(now())
+  reviewedAt        DateTime?
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  message           ChatMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  response          ModelResponse     @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+}
+
+model Source {
+  id             String       @id @default(cuid())
+  projectId      String
+  modelId        String?
+  url            String
+  title          String
+  authors        Json
+  publishedAt    DateTime?
+  retrievedAt    DateTime      @default(now())
+  doi            String?
+  apaCitation    String?
+  metadataStatus SourceStatus @default(VERIFIED)
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  citations      Citation[]
+
+  @@unique([projectId, url])
+}
+
+model Citation {
+  id         String        @id @default(cuid())
+  sourceId   String
+  responseId String
+  marker     String
+  createdAt  DateTime      @default(now())
+  source     Source        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  response   ModelResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, responseId, marker])
+}
+
+model UsageRecord {
+  id            String   @id @default(cuid())
+  projectId     String
+  messageId     String?
+  responseId    String?
+  provider      String
+  modelId       String
+  inputTokens   Int      @default(0)
+  outputTokens  Int      @default(0)
+  costUsd       Float?
+  credits       Float?
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+}

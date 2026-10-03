@@ -1,0 +1,44 @@
+{
+  "name": "multi-model-research-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^6.19.0",
+    "@prisma/client": "^6.14.0",
+    "citation-js": "^0.7.18",
+    "googleapis": "^159.0.0",
+    "next": "^15.5.2",
+    "next-auth": "^5.0.0-beta.29",
+    "openai": "^5.12.2",
+    "pg": "^8.16.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-markdown": "^10.1.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@citation-js/plugin-csl": "^0.7.18",
+    "@citation-js/plugin-doi": "^0.7.18",
+    "@eslint/eslintrc": "^3.3.1",
+    "@types/node": "^24.3.0",
+    "@types/pg": "^8.15.5",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.34.0",
+    "postcss": "^8.5.6",
+    "prisma": "^6.14.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.42.0",
+    "vitest": "^3.2.4"
+  }
+}
