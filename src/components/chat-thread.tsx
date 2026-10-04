@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { type CompanionConfig } from "@/lib/models/types";
 import { ProposalCard, type ProposalView } from "@/components/proposal-card";
@@ -47,6 +48,7 @@ export function ChatThread({
   sources,
   onAccept,
   onReject,
+  onEditMessage,
 }: {
   messages: Record<string, ChatView[]>;
   orderedModelIds: string[];
@@ -59,9 +61,12 @@ export function ChatThread({
   sources: SourceView[];
   onAccept: (modelId: string) => void;
   onReject: (modelId: string) => void;
+  onEditMessage?: (content: string) => void;
 }) {
   const t = useTranslations();
   const turns = buildThreadTurns(messages, orderedModelIds);
+  const [editingTurn, setEditingTurn] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState("");
 
   if (turns.length === 0) {
     return <div className="chat-thread chat-thread-empty"><div className="chat-thread-empty-inner"><span className="chat-thread-empty-icon" aria-hidden="true">💬</span><p className="empty-thread">{t("card.empty")}</p></div></div>;
@@ -74,9 +79,40 @@ export function ChatThread({
     <div className="chat-thread">
       {turns.map((turn, turnIndex) => {
         const isLastTurn = turnIndex === lastTurnIndex;
+        const canEdit = isLastTurn && !loading && onEditMessage;
+        const isEditing = editingTurn === turnIndex;
         return (
           <div key={turnIndex} className="ct-turn">
-            <div className="ct-user-msg">{turn.userContent}</div>
+            {isEditing ? (
+              <div className="ct-user-edit">
+                <textarea
+                  autoFocus
+                  className="ct-user-edit-area"
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                      onEditMessage?.(editDraft.trim());
+                      setEditingTurn(null);
+                    }
+                    if (e.key === "Escape") setEditingTurn(null);
+                  }}
+                />
+                <div className="ct-user-edit-actions">
+                  <button type="button" className="secondary-button" onClick={() => setEditingTurn(null)}>Cancelar</button>
+                  <button type="button" className="primary-button" disabled={!editDraft.trim()} onClick={() => { onEditMessage?.(editDraft.trim()); setEditingTurn(null); }}>Enviar</button>
+                </div>
+              </div>
+            ) : (
+              <div className="ct-user-msg-wrap">
+                <div className="ct-user-msg">{turn.userContent}</div>
+                {canEdit && (
+                  <button type="button" className="ct-edit-btn" title="Editar mensaje" aria-label="Editar mensaje" onClick={() => { setEditDraft(turn.userContent); setEditingTurn(turnIndex); }}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M9.5 1.5l3 3-8 8-4 1 1-4 8-8z" /></svg>
+                  </button>
+                )}
+              </div>
+            )}
             {turn.responses.map(({ modelId, content }) => {
               const participant = participants.find((p) => p.modelId === modelId);
               const companion = participant?.companion;

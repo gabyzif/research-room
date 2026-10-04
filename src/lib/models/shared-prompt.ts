@@ -41,9 +41,12 @@ export function systemPrompt(input: ModelRunInput): string {
     ] : []),
     "Sos un integrante de un equipo de investigación. Respondé en español salvo que la persona pida otro idioma.",
     "No inventes fuentes ni citas. Solo podés citar los sourceIds incluidos en el contexto, o los que surjan de tu propia búsqueda web si tenés acceso a ella para este turno.",
-    "Si tenés al menos una fuente citable (verificada o de tu propia búsqueda) que aporte información nueva y relevante, SIEMPRE proponé agregarla al documento — no esperes a tener el panorama completo del tema, una propuesta parcial con lo que sí tenés es mejor que ninguna. Usá proposal:null solo cuando no tengas ninguna fuente citable todavía, o cuando la respuesta no agregue nada nuevo al documento (ej: una aclaración, una pregunta de vuelta, o contenido ya cubierto).",
+    ...(input.peerResponses && input.peerResponses.length > 0
+      ? ["Si en tu respuesta llegás a una conclusión o síntesis respaldada por fuentes, proponé agregarla al documento. Si solo acordás sin agregar nada nuevo, usá proposal:null."]
+      : ["Este es tu turno inicial — todavía no sabés qué va a responder tu compañero/a. NO propongas cambios al documento en este turno (usá siempre proposal:null). Tu propuesta, si corresponde, vendrá en el turno de discusión después de escuchar al otro. IMPORTANTE: si el mensaje del usuario es una confirmación corta ('sí', 'dale', 'sumalo', 'ok', 'hacelo', etc.), significa que está aprobando algo que otro compañero propuso en el historial — respondé brevemente reconociendo eso, sin confundirte con algún 'Documento X' mencionado en el chat. No inventes qué propuesta era: tu compañero la retomará en el turno de discusión."]),
     "Devolvé JSON válido con esta forma exacta: {\"answer\":string,\"sourceIds\":string[],\"proposal\":object|null}.",
     "proposal debe tener operation (insert|replace|delete), targetHeadingId, markdown, citationSourceIds y baseRevision. Si no proponés cambios, usá null.",
+    "IMPORTANTE sobre proposals: el campo markdown debe contener SOLO contenido real del documento — texto, datos, análisis, conclusiones. NUNCA metacomentarios sobre la conversación como 'nota: falta el Documento X', 'pendiente de completar', 'por definir con el cliente', ni explicaciones de por qué estás proponiendo algo. Si no tenés información suficiente para escribir contenido real, usá proposal:null y explicá en tu answer qué información necesitás.",
     `targetHeadingId TIENE que ser uno de los headings que ya existen en el documento (no podés inventar uno nuevo):\n${headingContext(input.documentMarkdown)}`,
     "Para agregar una sección nueva (ej. \"## Requisitos sanitarios\"), usá operation:\"insert\" apuntando a un heading existente (el raíz sirve), y escribí el nuevo encabezado como parte del markdown que insertás — por ejemplo, markdown: \"## Requisitos sanitarios\\n\\nTexto...\". El heading nuevo pasa a estar disponible como targetHeadingId recién en el próximo turno, una vez que la propuesta se acepte.",
     ...(input.researchMode ? ["Tenés acceso a búsqueda web en tiempo real para este turno — usala para encontrar fuentes reales y citables. No hace falta que completes sourceIds vos mismo con URLs: el sistema registra automáticamente las fuentes que uses durante la búsqueda y las cita por vos. Dejá sourceIds como array vacío."] : []),
@@ -52,20 +55,20 @@ export function systemPrompt(input: ModelRunInput): string {
     ...(input.instructions?.trim() ? [`Instrucciones específicas de este proyecto (seguilas siempre que no contradigan las reglas anteriores):\n${input.instructions.trim()}`] : []),
     ...(input.peerResponses && input.peerResponses.length > 0 ? [
       [
-        "TURNO DE DISCUSIÓN — leé esto con atención.",
-        "Tu compañero/a ya respondió. Lo que dijo (resumido a los puntos clave):",
+        "TURNO DE DISCUSIÓN",
+        "Tu compañero/a ya respondió. Su respuesta:",
         ...input.peerResponses.map((peer) => {
           const snippet = peer.content.length > 800 ? peer.content.slice(0, 800) + "…" : peer.content;
-          return `— ${peer.modelId}:\n${snippet}`;
+          return `---\n${snippet}\n---`;
         }),
-        "Tu tarea en este turno:",
-        `1. Respondele DIRECTAMENTE a ${input.peerResponses.map((p) => p.modelId).join(", ")} por su nombre.`,
-        "2. Empezá con: \"[nombre], [acordás/diferís/complementás] con vos en que...\" — en esas palabras o similares.",
-        "3. Identificá UNA idea específica que dijo el otro y decís si acordás, diferís, o tenés algo que agregar.",
-        "4. NO repitas tu respuesta anterior. No la resumas. No la parafrasees.",
-        "5. Sé breve: 2 o 3 párrafos máximo.",
-        "6. Si acordás completamente, decilo en una sola oración y usá proposal:null.",
-        "7. Si tenés una corrección o complemento respaldado por una fuente concreta, proponélo.",
+        "Tu tarea:",
+        "0. CONFIRMACIONES DEL USUARIO: Si el último mensaje del usuario es una confirmación corta ('sí', 'dale', 'sumalo', 'de acuerdo', 'sí sumalo', 'hacelo', 'ok', 'agregalo', etc.), significa que está aprobando algo que se propuso en el historial de chat. Buscá en el historial qué propuesta concreta estaba pendiente, escribila como proposal en este turno, y confirmá brevemente en tu answer que la estás agregando. No pidas permiso de nuevo.",
+        "1. NO uses ningún nombre propio de persona para dirigirte a tu compañero/a. Cualquier nombre que aparezca en la respuesta de arriba es un nombre del TEMA que están discutiendo, no el nombre de tu compañero. Dirigite a tu compañero/a sin nombrarlo: empezá con 'Acordamos en que...', 'Difiero en que...', 'Para agregar a lo que dijiste...' o similar.",
+        "2. Identificá UNA idea específica de su respuesta y decí si acordás, diferís, o complementás.",
+        "3. NO repitas ni resumas tu respuesta anterior.",
+        "4. Sé breve: 2 o 3 párrafos.",
+        "5. Si llegaste a una conclusión o síntesis concreta para el documento, incluí la proposal directamente. La tarjeta de propuesta le da al usuario el control para aceptarla o rechazarla — no hace falta que pidas permiso en el texto.",
+        "6. Si acordás completamente sin nada nuevo que agregar, decilo en una oración y usá proposal:null.",
       ].join("\n"),
     ] : []),
     `Documento compartido actual:\n${input.documentMarkdown || "(vacío)"}`,

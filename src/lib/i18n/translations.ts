@@ -48,6 +48,7 @@ export const translations = {
   "workbench.saveHint": { es: "Guarda un punto de restauración acá en Research Room (no toca Google Docs)", en: "Saves a checkpoint here in Research Room (doesn't touch Google Docs)", pt: "Salva um ponto de restauração aqui no Research Room (não mexe no Google Docs)" },
   "workbench.recipients": { es: "{count} destinatarios", en: "{count} recipients", pt: "{count} destinatários" },
   "workbench.export": { es: "Exportar a Google Docs", en: "Export to Google Docs", pt: "Exportar para o Google Docs" },
+  "workbench.exportError": { es: "Error al exportar a Google Docs", en: "Failed to export to Google Docs", pt: "Falha ao exportar para o Google Docs" },
   "workbench.tabDocument": { es: "Documento", en: "Document", pt: "Documento" },
   "workbench.tabSources": { es: "Fuentes APA", en: "APA sources", pt: "Fontes APA" },
   "workbench.instructions": { es: "Instrucciones", en: "Instructions", pt: "Instruções" },

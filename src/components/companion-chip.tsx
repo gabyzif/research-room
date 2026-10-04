@@ -2,10 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import { type ProviderId } from "@/components/api-credentials-settings";
 import { modelCatalog } from "@/lib/models/catalog";
 import { type CompanionConfig } from "@/lib/models/types";
 import { type DynamicModel } from "@/components/model-workbench";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
 const PERSONALITY_PRESETS = [
   { label: "— Elegir plantilla —", value: null },
@@ -261,6 +264,30 @@ export function CompanionChip({ modelId, index, companion, onCompanionChange, on
   dynamicModels: DynamicModel[];
 }) {
   const [personalityOpen, setPersonalityOpen] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [emojiPickerPos, setEmojiPickerPos] = useState({ top: 0, left: 0 });
+  const emojiBtnRef = useRef<HTMLButtonElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (!emojiPickerOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!emojiBtnRef.current?.contains(t) && !emojiPickerRef.current?.contains(t)) setEmojiPickerOpen(false);
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [emojiPickerOpen]);
+
+  function openEmojiPicker() {
+    if (emojiBtnRef.current) {
+      const r = emojiBtnRef.current.getBoundingClientRect();
+      setEmojiPickerPos({ top: r.bottom + 6, left: r.left });
+    }
+    setEmojiPickerOpen((v) => !v);
+  }
 
   const nonOpenRouterOptions = modelCatalog.filter((o) => o.provider !== "openrouter" && o.provider !== "copilot" && connectedProviders.includes(o.provider));
   const freeModels = dynamicModels.filter((m) => m.isFree);
@@ -268,22 +295,58 @@ export function CompanionChip({ modelId, index, companion, onCompanionChange, on
 
   return (
     <div className="companion-chip">
-      <span className="model-card-v2-emoji">{companion.emoji || "🤖"}</span>
-      <input
-        type="text"
-        className="model-card-v2-name"
-        value={companion.name}
-        maxLength={40}
-        onChange={(e) => onCompanionChange({ ...companion, name: e.target.value })}
-        aria-label="Nombre del compañero"
-        title={companion.name}
-        spellCheck={false}
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-      />
-
-      <div className="companion-chip-model-desktop">
+      <div className="companion-chip-top">
+        <button
+          ref={emojiBtnRef}
+          type="button"
+          className="companion-chip-emoji-btn"
+          onClick={openEmojiPicker}
+          aria-label="Cambiar emoji del compañero"
+          aria-expanded={emojiPickerOpen}
+          title="Click para cambiar el emoji"
+        >
+          {companion.emoji || "🤖"}
+        </button>
+        {mounted && emojiPickerOpen && createPortal(
+          <div
+            ref={emojiPickerRef}
+            style={{ position: "fixed", top: emojiPickerPos.top, left: emojiPickerPos.left, zIndex: 10000 }}
+          >
+            <EmojiPicker
+              onEmojiClick={(emojiData) => {
+                onCompanionChange({ ...companion, emoji: emojiData.emoji });
+                setEmojiPickerOpen(false);
+              }}
+              autoFocusSearch={false}
+              width={320}
+              height={400}
+            />
+          </div>,
+          document.body
+        )}
+        <input
+          type="text"
+          className="model-card-v2-name"
+          value={companion.name}
+          maxLength={40}
+          onChange={(e) => onCompanionChange({ ...companion, name: e.target.value })}
+          aria-label="Nombre del compañero"
+          title={companion.name}
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+        />
+        <button
+          type="button"
+          className="companion-chip-personality-toggle"
+          onClick={() => setPersonalityOpen((v) => !v)}
+          aria-expanded={personalityOpen}
+          aria-label={`Instrucciones para el compañero ${index + 1}`}
+          title="Darle instrucciones o una personalidad a este compañero"
+        >💡</button>
+      </div>
+      <div className="companion-chip-bottom">
         <ModelSelectDropdown
           value={modelId}
           onChange={onChangeModel}
@@ -293,15 +356,6 @@ export function CompanionChip({ modelId, index, companion, onCompanionChange, on
           dynamicModels={dynamicModels}
         />
       </div>
-
-      <button
-        type="button"
-        className="companion-chip-personality-toggle"
-        onClick={() => setPersonalityOpen((v) => !v)}
-        aria-expanded={personalityOpen}
-        aria-label={`Instrucciones para el compañero ${index + 1}`}
-        title="Darle instrucciones o una personalidad a este compañero"
-      >💡</button>
 
       {personalityOpen && (
         <div className="companion-chip-personality">

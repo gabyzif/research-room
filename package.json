@@ -14,6 +14,7 @@
     "@prisma/adapter-pg": "^6.19.0",
     "@prisma/client": "^6.14.0",
     "citation-js": "^0.7.18",
+    "emoji-picker-react": "^4.22.3",
     "googleapis": "^159.0.0",
     "next": "^15.5.2",
     "next-auth": "^5.0.0-beta.29",

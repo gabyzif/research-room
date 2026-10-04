@@ -1,7 +1,7 @@
 "use client";
 import { useTranslations } from "@/components/language-provider";
 
-export function ModelComposer({ researchMode, value, onChange, onResearchModeChange, onSend, disabled }: { researchMode: boolean; value: string; onChange: (value: string) => void; onResearchModeChange: (value: boolean) => void; onSend: () => void; disabled: boolean }) {
+export function ModelComposer({ researchMode, value, onChange, onResearchModeChange, onSend, onStop, disabled }: { researchMode: boolean; value: string; onChange: (value: string) => void; onResearchModeChange: (value: boolean) => void; onSend: () => void; onStop?: () => void; disabled: boolean }) {
   const t = useTranslations();
 
   return (
@@ -18,11 +18,18 @@ export function ModelComposer({ researchMode, value, onChange, onResearchModeCha
           className="composer-textarea"
         />
         <div className="composer-actions">
-          <button type="button" onClick={onSend} disabled={disabled || !value.trim()} className="composer-send">
-            {disabled ? t("composer.sending") : t("composer.send")}
-          </button>
+          {disabled ? (
+            <button type="button" onClick={() => onStop?.()} className="composer-stop" aria-label="Detener respuesta">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="10" height="10" rx="2" /></svg>
+              Detener
+            </button>
+          ) : (
+            <button type="button" onClick={() => onSend()} disabled={!value.trim()} className="composer-send">
+              {t("composer.send")}
+            </button>
+          )}
           <label className="research-toggle">
-            <input type="checkbox" checked={researchMode} onChange={(e) => onResearchModeChange(e.target.checked)} />
+            <input type="checkbox" checked={researchMode} onChange={(e) => onResearchModeChange(e.target.checked)} disabled={disabled} />
             {t("composer.researchMode")}
           </label>
           <span className="composer-hint">⌘↵ para enviar</span>
